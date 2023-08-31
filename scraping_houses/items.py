@@ -73,3 +73,5 @@ class ScrapingHousesItem(scrapy.Item):
     sauna = scrapy.Field()
     refrigerador = scrapy.Field()
     amoblado = scrapy.Field()
+    imagenes = scrapy.Field()
+    descripcion = scrapy.Field()

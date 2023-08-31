@@ -16,7 +16,7 @@ class housespider(scrapy.Spider):
                     url=url_comuna,
                     callback=self.urls_casas,
                     meta={"comuna": comuna, "region": region}
-                )  
+                )
 
     def urls_casas(self, response):
         comuna = response.meta["comuna"]
@@ -90,4 +90,13 @@ class housespider(scrapy.Spider):
                 item[variable_name] = variable.css(
                     ".andes-table__column--value::text"
                 ).get()
+
+        url_imagenes = []
+        imagenes = response.css("span.ui-pdp-gallery__wrapper")
+        for imagen in imagenes:
+            url = imagen.css("img.ui-pdp-image::attr(data-zoom)").get()
+            url_imagenes.append(url)
+        item['imagenes'] = url_imagenes
+        item['descripcion'] = response.css("p.ui-pdp-description__content::text").getall()
+
         yield item
