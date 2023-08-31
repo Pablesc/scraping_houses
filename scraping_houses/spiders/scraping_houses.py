@@ -18,31 +18,10 @@ class housespider(scrapy.Spider):
                     meta={'tipo': tipo, 'propiedad': propiedad}
                 )
 
-        # comunas = ['Calera-de-tango']
-        # regiones = ["Metropolitana"]
-        # for region in regiones:
-        #     for comuna in comunas:
-        #         url_comuna =  f"https://www.portalinmobiliario.com/venta/casa/propiedades-usadas/{unidecode(comuna)}-{region}/_NoIndex_True"
-        #         yield scrapy.Request(
-        #             url=url_comuna,
-        #             callback=self.urls_casas,
-        #             meta={"comuna": comuna, "region": region}
-        #         )
     def urls_region(self,response):
         tipo = response.meta['tipo']
         propiedad = response.meta['propiedad']
-        #url_regiones = response.css("a.ui-search-search-modal-filter.ui-search-link::attr(href)").getall()
         regiones = response.css("span.ui-search-search-modal-filter-name::text").getall()
-        # for nombre_region, url_region in zip(nombre_regiones, url_regiones):
-        #     url = url_region
-        #     region = nombre_region
-        #     endregion esto nose que chucha
-        #     yield scrapy.Request(
-        #         url = url,
-        #         callback=self.urls_comunas,
-        #         meta={'region':region}
-        #     )
-            #f"_FiltersAvailableSidebar?filter=city
         for region in regiones:
             url = f"https://www.portalinmobiliario.com/{tipo}/{propiedad}/propiedades-usadas/{region}_FiltersAvailableSidebar?filter=city"
             yield scrapy.Request(
