@@ -7,18 +7,65 @@ class housespider(scrapy.Spider):
     name = "houses"
 
     def start_requests(self):
-        comunas = ['Calera-de-tango']
-        regiones = ["Metropolitana"]
-        for region in regiones:
-            for comuna in comunas:
-                url_comuna =  f"https://www.portalinmobiliario.com/venta/casa/propiedades-usadas/{unidecode(comuna)}-{region}/_NoIndex_True"
+        tipo_publicacion = ['venta']#, 'arriendo']
+        propiedades = ['casa']#, 'departamento']
+        for tipo in tipo_publicacion:
+            for propiedad in propiedades:
+                url = f"https://www.portalinmobiliario.com/{tipo}/{propiedad}/propiedades-usadas_FiltersAvailableSidebar?filter=state"
                 yield scrapy.Request(
-                    url=url_comuna,
-                    callback=self.urls_casas,
-                    meta={"comuna": comuna, "region": region}
+                    url = url,
+                    callback=self.urls_region,
+                    meta={'tipo': tipo, 'propiedad': propiedad}
                 )
 
-    def urls_casas(self, response):
+        # comunas = ['Calera-de-tango']
+        # regiones = ["Metropolitana"]
+        # for region in regiones:
+        #     for comuna in comunas:
+        #         url_comuna =  f"https://www.portalinmobiliario.com/venta/casa/propiedades-usadas/{unidecode(comuna)}-{region}/_NoIndex_True"
+        #         yield scrapy.Request(
+        #             url=url_comuna,
+        #             callback=self.urls_casas,
+        #             meta={"comuna": comuna, "region": region}
+        #         )
+    def urls_region(self,response):
+        tipo = response.meta['tipo']
+        propiedad = response.meta['propiedad']
+        #url_regiones = response.css("a.ui-search-search-modal-filter.ui-search-link::attr(href)").getall()
+        regiones = response.css("span.ui-search-search-modal-filter-name::text").getall()
+        # for nombre_region, url_region in zip(nombre_regiones, url_regiones):
+        #     url = url_region
+        #     region = nombre_region
+        #     endregion esto nose que chucha
+        #     yield scrapy.Request(
+        #         url = url,
+        #         callback=self.urls_comunas,
+        #         meta={'region':region}
+        #     )
+            #f"_FiltersAvailableSidebar?filter=city
+        for region in regiones:
+            url = f"https://www.portalinmobiliario.com/{tipo}/{propiedad}/propiedades-usadas/{region}_FiltersAvailableSidebar?filter=city"
+            yield scrapy.Request(
+                url = url,
+                callback=self.urls_comunas,
+                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region}
+            )
+    def urls_comunas(self,response):
+        tipo = response.meta['tipo']
+        propiedad = response.meta['propiedad']
+        region = response.meta['region']
+        url_comunas = response.css("a.ui-search-search-modal-filter.ui-search-link::attr(href)").getall()
+        comunas = response.css("span.ui-search-search-modal-filter-name::text").getall()
+        for comuna, url_comuna in zip(comunas, url_comunas):
+            url = url_comuna
+            yield scrapy.Request(
+                url = url,
+                callback=self.urls_inmuebles,
+                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna}
+            )
+    def urls_inmuebles(self, response):
+        tipo = response.meta['tipo']
+        propiedad = response.meta['propiedad']
         comuna = response.meta["comuna"]
         region = response.meta["region"]
 
@@ -32,23 +79,31 @@ class housespider(scrapy.Spider):
         resultado = [int(x) for x in resultado_.split() if x.isdigit()]
 
         if resultado[0] > 2000:
-            comunas_filter = response.css(".ui-search-money-picker__li")
-            urls_comuna_filter = comunas_filter.css("a::attr(href)").getall()
-            for url in urls_comuna_filter:
+            comunas_filtro = response.css(".ui-search-money-picker__li")
+            urls_comunas_filtro = comunas_filtro.css("a::attr(href)").getall()
+            for url in urls_comunas_filtro:
                 yield scrapy.Request(
                     url=url,
-                    callback=self.urls_casas,
-                    meta={"comuna": comuna, "region": region}
+                    callback=self.urls_inmuebles,
+                    meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region}
                 )
         
-        lista_casas = response.css("div.ui-search-result__wrapper")
-        for casas in lista_casas:
-            url_casa = casas.css("a::attr(href)").get()
-            yield scrapy.Request(
-                url=url_casa,
-                callback=self.parse_casa_data,
-                meta={"comuna": comuna, "region": region}
-            )
+        lista_inmuebles = response.css("div.ui-search-result__wrapper")
+        if tipo == 'venta' and propiedad == 'casa':  
+            for casas in lista_inmuebles:
+                url_casa = casas.css("a::attr(href)").get()
+                yield scrapy.Request(
+                    url=url_casa,
+                    callback=self.parse_casa_venta,
+                    meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region}
+                )
+        elif tipo == 'arriendo' and propiedad == 'casa':
+            pass
+        elif tipo == 'venta' and propiedad == 'departamento': 
+            pass
+        elif tipo == 'arriendo' and propiedad == 'departamento':
+            pass  
+    
 
         first_page = response.css(
             "li.andes-pagination__button.andes-pagination__button--next.shops__pagination-button"
@@ -57,16 +112,18 @@ class housespider(scrapy.Spider):
         if next_page is not None:
             yield response.follow(
                 next_page,
-                callback=self.urls_casas,
-                meta={"comuna": comuna, "region": region},
+                callback=self.urls_inmuebles,
+                meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region},
             )
 
-    def parse_casa_data(self, response, **kwargs):
+    def parse_casa_venta(self, response, **kwargs):
         item = ScrapingHousesItem()
-               
+        
         item['precio'] = response.css(".ui-pdp-price__second-line span::text").get()
         item['comuna'] = response.meta["comuna"]
         item['region'] = response.meta["region"]
+        item['tipo'] = response.meta["tipo"]
+        item['propiedad'] = response.meta["propiedad"]
         ubicacion_ = response.css(".ui-vip-location__map")
         item['ubicacion'] = ubicacion_.css("img.ui-pdp-image::attr(src)").get()
         item['direccion'] = response.css(
@@ -100,3 +157,12 @@ class housespider(scrapy.Spider):
         item['descripcion'] = response.css("p.ui-pdp-description__content::text").getall()
 
         yield item
+
+    def parse_casa_arriendo(self, response, **kwargs):
+        pass
+    
+    def parse_depa_venta(self, response, **kwargs):
+        pass
+
+    def parse_depa_arriendo(self, response, **kwargs):
+        pass

@@ -75,3 +75,5 @@ class ScrapingHousesItem(scrapy.Item):
     amoblado = scrapy.Field()
     imagenes = scrapy.Field()
     descripcion = scrapy.Field()
+    tipo = scrapy.Field()
+    propiedad = scrapy.Field()
