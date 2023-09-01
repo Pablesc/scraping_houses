@@ -46,16 +46,16 @@ class housespider(scrapy.Spider):
                         callback=self.urls_comunas_,
                         meta={'tipo': tipo, 'propiedad': propiedad, 'region': region}
                     )
-
-                comunas = filtro.css("span.ui-search-filter-name.shops-custom-secondary-font::text").getall()
-                url_comunas = filtro.css("a.ui-search-link::attr(href)").getall()
-                for comuna, url_comuna in zip(comunas, url_comunas):
-                    url = url_comuna
-                    yield scrapy.Request(
-                        url = url,
-                        callback=self.urls_inmuebles,
-                        meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna}
-                    )
+                else:
+                    comunas = filtro.css("span.ui-search-filter-name.shops-custom-secondary-font::text").getall()
+                    url_comunas = filtro.css("a.ui-search-link::attr(href)").getall()
+                    for comuna, url_comuna in zip(comunas, url_comunas):
+                        url = url_comuna
+                        yield scrapy.Request(
+                            url = url,
+                            callback=self.urls_inmuebles,
+                            meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna}
+                        )
 
     def urls_comunas_(self,response):
         tipo = response.meta['tipo']
