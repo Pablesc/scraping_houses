@@ -2,6 +2,7 @@ import scrapy
 class ScrapingHousesItem(scrapy.Item):
     # define the fields for your item here like:
     precio = scrapy.Field()
+    barrio = scrapy.Field()
     region = scrapy.Field()
     comuna = scrapy.Field()
     direccion = scrapy.Field()

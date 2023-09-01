@@ -21,15 +21,43 @@ class housespider(scrapy.Spider):
     def urls_region(self,response):
         tipo = response.meta['tipo']
         propiedad = response.meta['propiedad']
+        url_regiones = response.css("a.ui-search-search-modal-filter.ui-search-link::attr(href)").getall()
         regiones = response.css("span.ui-search-search-modal-filter-name::text").getall()
-        for region in regiones:
-            url = f"https://www.portalinmobiliario.com/{tipo}/{propiedad}/propiedades-usadas/{region}_FiltersAvailableSidebar?filter=city"
+        for region, url_region in zip(regiones, url_regiones):
+            #url = f"https://www.portalinmobiliario.com/{tipo}/{propiedad}/propiedades-usadas/{unidecode(region)}_FiltersAvailableSidebar?filter=city"
+            url = url_region
             yield scrapy.Request(
                 url = url,
                 callback=self.urls_comunas,
                 meta={'tipo': tipo, 'propiedad': propiedad, 'region': region}
             )
     def urls_comunas(self,response):
+        tipo = response.meta['tipo']
+        propiedad = response.meta['propiedad']
+        region = response.meta['region']
+        filtros = response.css(".ui-search-filter-dl.shops__filter-items")
+        for filtro in filtros:
+            tipo_filtro = filtro.css("h3.ui-search-filter-dt-title.shops-custom-primary-font::text").get()
+            if tipo_filtro == 'Ciudades':
+                url_ = filtro.css("a.ui-search-modal__link.ui-search-modal--default.ui-search-link::attr(href)").get()
+                if url_ is not None:
+                    yield scrapy.Request(
+                        url = url_,
+                        callback=self.urls_comunas_,
+                        meta={'tipo': tipo, 'propiedad': propiedad, 'region': region}
+                    )
+
+                comunas = filtro.css("span.ui-search-filter-name.shops-custom-secondary-font::text").getall()
+                url_comunas = filtro.css("a.ui-search-link::attr(href)").getall()
+                for comuna, url_comuna in zip(comunas, url_comunas):
+                    url = url_comuna
+                    yield scrapy.Request(
+                        url = url,
+                        callback=self.urls_inmuebles,
+                        meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna}
+                    )
+
+    def urls_comunas_(self,response):
         tipo = response.meta['tipo']
         propiedad = response.meta['propiedad']
         region = response.meta['region']
@@ -42,6 +70,7 @@ class housespider(scrapy.Spider):
                 callback=self.urls_inmuebles,
                 meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna}
             )
+
     def urls_inmuebles(self, response):
         tipo = response.meta['tipo']
         propiedad = response.meta['propiedad']
@@ -53,8 +82,11 @@ class housespider(scrapy.Spider):
                 ".ui-search-search-result__quantity-results.shops-custom-secondary-font::text"
             )
             .get()
-            .replace(".", "")
         )
+
+        if '.' in resultado_:
+            resultado_ = resultado_.replace('.', '')
+
         resultado = [int(x) for x in resultado_.split() if x.isdigit()]
 
         if resultado[0] > 2000:
@@ -99,6 +131,7 @@ class housespider(scrapy.Spider):
         item = ScrapingHousesItem()
         
         item['precio'] = response.css(".ui-pdp-price__second-line span::text").get()
+        item['barrio'] = response.css(".andes-breadcrumb__item:nth-child(6) .andes-breadcrumb__link::text").get()
         item['comuna'] = response.meta["comuna"]
         item['region'] = response.meta["region"]
         item['tipo'] = response.meta["tipo"]
