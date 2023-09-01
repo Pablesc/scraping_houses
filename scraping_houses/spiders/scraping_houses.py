@@ -43,7 +43,7 @@ class housespider(scrapy.Spider):
                 if url_ is not None:
                     yield scrapy.Request(
                         url = url_,
-                        callback=self.urls_comunas_,
+                        callback=self.urls_comunas_filtro,
                         meta={'tipo': tipo, 'propiedad': propiedad, 'region': region}
                     )
                 else:
@@ -57,7 +57,7 @@ class housespider(scrapy.Spider):
                             meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna}
                         )
 
-    def urls_comunas_(self,response):
+    def urls_comunas_filtro(self,response):
         tipo = response.meta['tipo']
         propiedad = response.meta['propiedad']
         region = response.meta['region']
