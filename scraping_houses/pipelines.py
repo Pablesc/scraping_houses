@@ -7,8 +7,8 @@ class ScrapingHousesPipeline:
             'localhost',
             27017
         )
-        db = self.conn['info']
-        self.collection = db['caleradetango']
+        db = self.conn['Data_casas']
+        self.collection = db['Ventas']
 
     def process_item(self, item, spider):
         self.collection.insert_one(dict(item))

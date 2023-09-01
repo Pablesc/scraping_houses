@@ -80,9 +80,9 @@ CONCURRENT_REQUESTS = 4
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-# ITEM_PIPELINES = {
-#    "scraping_houses.pipelines.ScrapingHousesPipeline": 300,
-# }
+ITEM_PIPELINES = {
+   "scraping_houses.pipelines.ScrapingHousesPipeline": 300,
+}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
