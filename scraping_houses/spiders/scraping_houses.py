@@ -1,6 +1,8 @@
 import scrapy
 from unidecode import unidecode
 import datetime
+import time
+import random
 from scraping_houses.items import ScrapingHousesItem
 
 class housespider(scrapy.Spider):
@@ -79,8 +81,8 @@ class housespider(scrapy.Spider):
 
         resultado_ = (
             response.css(
-                ".ui-search-search-result__quantity-results.shops-custom-secondary-font::text"
-            )
+                "span.ui-search-search-result__quantity-results.shops-custom-secondary-font::text"
+            )   
             .get()
         )
 
@@ -98,23 +100,20 @@ class housespider(scrapy.Spider):
                     callback=self.urls_inmuebles,
                     meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region}
                 )
-        
-        lista_inmuebles = response.css("div.ui-search-result__wrapper")
-        if tipo == 'venta' and propiedad == 'casa':  
+        else:
+            lista_inmuebles = response.css("div.ui-search-result__wrapper") 
             for casas in lista_inmuebles:
                 url_casa = casas.css("a::attr(href)").get()
                 yield scrapy.Request(
                     url=url_casa,
-                    callback=self.parse_casa_venta,
-                    meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region}
+                    callback=self.parse_data,
+                    meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region, 'url':url_casa}
                 )
-        elif tipo == 'arriendo' and propiedad == 'casa':
-            pass
-        elif tipo == 'venta' and propiedad == 'departamento': 
-            pass
-        elif tipo == 'arriendo' and propiedad == 'departamento':
-            pass  
-    
+                t1 = random.uniform(0.1,0.5)
+                time.sleep(t1)
+
+            t2 = random.randint(5, 10)
+            time.sleep(t2)
 
         first_page = response.css(
             "li.andes-pagination__button.andes-pagination__button--next.shops__pagination-button"
@@ -127,7 +126,7 @@ class housespider(scrapy.Spider):
                 meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region},
             )
 
-    def parse_casa_venta(self, response, **kwargs):
+    def parse_data(self, response, **kwargs):
         item = ScrapingHousesItem()
         
         item['precio'] = response.css(".ui-pdp-price__second-line span::text").get()
@@ -136,6 +135,7 @@ class housespider(scrapy.Spider):
         item['region'] = response.meta["region"]
         item['tipo'] = response.meta["tipo"]
         item['propiedad'] = response.meta["propiedad"]
+        item['url'] = response.meta["url"]
         ubicacion_ = response.css(".ui-vip-location__map")
         item['ubicacion'] = ubicacion_.css("img.ui-pdp-image::attr(src)").get()
         item['direccion'] = response.css(
@@ -169,12 +169,3 @@ class housespider(scrapy.Spider):
         item['descripcion'] = response.css("p.ui-pdp-description__content::text").getall()
 
         yield item
-
-    def parse_casa_arriendo(self, response, **kwargs):
-        pass
-    
-    def parse_depa_venta(self, response, **kwargs):
-        pass
-
-    def parse_depa_arriendo(self, response, **kwargs):
-        pass

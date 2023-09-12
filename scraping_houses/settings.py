@@ -15,7 +15,7 @@ NEWSPIDER_MODULE = "scraping_houses.spiders"
 #################### Scrapy-Fake-Useragent ######################
 DOWNLOADER_MIDDLEWARES = {
     "scrapy.downloadermiddlewares.useragent.UserAgentMiddleware": None,
-    "scrapy.downloadermiddlewares.retry.RetryMiddleware": None,
+    "scrapy.downloadermiddlewares.retry.RetryMiddleware": 550,
     "scrapy_fake_useragent.middleware.RandomUserAgentMiddleware": 400,
     "scrapy_fake_useragent.middleware.RetryUserAgentMiddleware": 401,
 }
@@ -38,7 +38,7 @@ USER_AGENT = "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Goo
 # ROBOTSTXT_OBEY = True
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-CONCURRENT_REQUESTS = 4
+CONCURRENT_REQUESTS = 6
 
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
@@ -93,7 +93,7 @@ AUTOTHROTTLE_START_DELAY = 5
 AUTOTHROTTLE_MAX_DELAY = 60
 # The average number of requests Scrapy should be sending in parallel to
 # each remote server
-AUTOTHROTTLE_TARGET_CONCURRENCY = 2.0
+AUTOTHROTTLE_TARGET_CONCURRENCY = 5.0
 # Enable showing throttling stats for every response received:
 # AUTOTHROTTLE_DEBUG = False
 
@@ -104,6 +104,25 @@ AUTOTHROTTLE_TARGET_CONCURRENCY = 2.0
 # HTTPCACHE_DIR = "httpcache"
 # HTTPCACHE_IGNORE_HTTP_CODES = []
 # HTTPCACHE_STORAGE = "scrapy.extensions.httpcache.FilesystemCacheStorage"
+
+
+# Retry settings
+RETRY_ENABLED = True
+RETRY_TIMES = 3
+RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429]
+# RETRY_EXCEPTIONS = [
+#     'twisted.internet.defer.TimeoutError',
+#     'twisted.internet.error.TimeoutError',
+#     'twisted.internet.error.DNSLookupError',
+#     'twisted.internet.error.ConnectionRefusedError',
+#     'twisted.internet.error.ConnectionDone',
+#     'twisted.internet.error.ConnectError',
+#     'twisted.internet.error.ConnectionLost',
+#     'twisted.internet.error.TCPTimedOutError',
+#     'twisted.web.client.ResponseFailed',
+#     IOError,
+#     'scrapy.core.downloader.handlers.http11.TunnelError',
+# ]
 
 # Set settings whose default value is deprecated to a future-proof value
 REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"
