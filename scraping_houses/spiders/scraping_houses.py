@@ -25,13 +25,6 @@ class housespider(scrapy.Spider):
         propiedad = response.meta['propiedad']
         url_regiones = response.css("a.ui-search-search-modal-filter.ui-search-link::attr(href)").getall()
         regiones = response.css("span.ui-search-search-modal-filter-name::text").getall()
-        # Prueba    
-        #url_regiones = ['https://www.portalinmobiliario.com/venta/casa/propiedades-usadas/nuble']
-        #regiones = ['Ñuble']
-        #url_regiones = ['https://www.portalinmobiliario.com/venta/casa/propiedades-usadas/de-los-rios']
-        #regiones = ['Los ríos']
-        #url_regiones = ['https://www.portalinmobiliario.com/venta/casa/propiedades-usadas/valparaiso']
-        #regiones = ['valparaíso']
         for region, url_region in zip(regiones, url_regiones):
             #url = f"https://www.portalinmobiliario.com/{tipo}/{propiedad}/propiedades-usadas/{unidecode(region)}_FiltersAvailableSidebar?filter=city"
             url = url_region
