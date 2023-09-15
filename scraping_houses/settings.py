@@ -90,7 +90,7 @@ AUTOTHROTTLE_ENABLED = True
 # The initial download delay
 AUTOTHROTTLE_START_DELAY = 5
 # The maximum download delay to be set in case of high latencies
-AUTOTHROTTLE_MAX_DELAY = 60
+AUTOTHROTTLE_MAX_DELAY = 80
 # The average number of requests Scrapy should be sending in parallel to
 # each remote server
 AUTOTHROTTLE_TARGET_CONCURRENCY = 5.0
@@ -109,7 +109,7 @@ AUTOTHROTTLE_TARGET_CONCURRENCY = 5.0
 # Retry settings
 RETRY_ENABLED = True
 RETRY_TIMES = 3
-RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429]
+RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429, 301, 302, 404]
 # RETRY_EXCEPTIONS = [
 #     'twisted.internet.defer.TimeoutError',
 #     'twisted.internet.error.TimeoutError',
@@ -123,6 +123,8 @@ RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429]
 #     IOError,
 #     'scrapy.core.downloader.handlers.http11.TunnelError',
 # ]
+
+DOWNLOAD_TIMEOUT = 240
 
 # Set settings whose default value is deprecated to a future-proof value
 REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"

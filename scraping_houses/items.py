@@ -1,6 +1,6 @@
 import scrapy
 class ScrapingHousesItem(scrapy.Item):
-    # define the fields for your item here like:
+    # Items de casas en venta
     precio = scrapy.Field()
     barrio = scrapy.Field()
     region = scrapy.Field()
@@ -79,3 +79,31 @@ class ScrapingHousesItem(scrapy.Item):
     descripcion = scrapy.Field()
     tipo = scrapy.Field()
     propiedad = scrapy.Field()
+
+    # Items adicionales de casas en arriendo
+    admite_mascotas = scrapy.Field()
+    parque_infantil = scrapy.Field()
+    con_tv_satelital = scrapy.Field()
+    jardinero = scrapy.Field()
+    solo_familias = scrapy.Field()
+    cantidad_maxima_de_habitantes = scrapy.Field()
+    disponible_desde = scrapy.Field()
+
+    # Items adicionales de departamentos en venta
+    superficie_de_terraza = scrapy.Field()
+    ambientes = scrapy.Field()
+    departamentos_por_piso = scrapy.Field()
+    tipo_de_departamento = scrapy.Field()
+    numero_de_piso_de_la_unidad = scrapy.Field()
+    rampa_para_silla_de_ruedas = scrapy.Field()
+    numero_de_torre = scrapy.Field()
+    canchas_de_usos_multiples = scrapy.Field()
+    business_center = scrapy.Field()
+    salon_de_usos_multiples = scrapy.Field()
+    lavanderia = scrapy.Field()
+    azotea = scrapy.Field()
+    uso_comercial = scrapy.Field()
+    recepcion = scrapy.Field()
+
+    # Items adicionales de departamentos en arriendo
+    

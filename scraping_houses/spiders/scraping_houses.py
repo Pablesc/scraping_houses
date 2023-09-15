@@ -9,8 +9,8 @@ class housespider(scrapy.Spider):
     name = "houses"
 
     def start_requests(self):
-        tipo_publicacion = ['venta']#, 'arriendo']
-        propiedades = ['casa']#, 'departamento']
+        tipo_publicacion = ['venta', 'arriendo']
+        propiedades = ['casa', 'departamento']
         for tipo in tipo_publicacion:
             for propiedad in propiedades:
                 url = f"https://www.portalinmobiliario.com/{tipo}/{propiedad}/propiedades-usadas_FiltersAvailableSidebar?filter=state"
@@ -31,15 +31,17 @@ class housespider(scrapy.Spider):
             yield scrapy.Request(
                 url = url,
                 callback=self.urls_comunas,
-                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region}
+                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'url_region': url}
             )
     def urls_comunas(self,response):
         tipo = response.meta['tipo']
         propiedad = response.meta['propiedad']
         region = response.meta['region']
         filtros = response.css(".ui-search-filter-dl.shops__filter-items")
+        tipos_filtros = []
         for filtro in filtros:
             tipo_filtro = filtro.css("h3.ui-search-filter-dt-title.shops-custom-primary-font::text").get()
+            tipos_filtros.append(tipo_filtro)
             if tipo_filtro == 'Ciudades':
                 url_ = filtro.css("a.ui-search-modal__link.ui-search-modal--default.ui-search-link::attr(href)").get()
                 if url_ is not None:
@@ -58,7 +60,14 @@ class housespider(scrapy.Spider):
                             callback=self.urls_inmuebles,
                             meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna}
                         )
-
+        if 'Ciudades' not in tipos_filtros:
+            url_region =  response.meta['url_region']
+            yield scrapy.Request(
+                url = url_region,
+                callback=self.urls_inmuebles,
+                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': region},
+                dont_filter=True
+            )
     def urls_comunas_filtro(self,response):
         tipo = response.meta['tipo']
         propiedad = response.meta['propiedad']
@@ -91,7 +100,7 @@ class housespider(scrapy.Spider):
 
         resultado = [int(x) for x in resultado_.split() if x.isdigit()]
 
-        if resultado[0] > 2000:
+        if resultado[0] > 2000: #2016
             comunas_filtro = response.css(".ui-search-money-picker__li")
             urls_comunas_filtro = comunas_filtro.css("a::attr(href)").getall()
             for url in urls_comunas_filtro:
@@ -115,10 +124,10 @@ class housespider(scrapy.Spider):
             t2 = random.randint(5, 10)
             time.sleep(t2)
 
-        first_page = response.css(
+        next_button = response.css(
             "li.andes-pagination__button.andes-pagination__button--next.shops__pagination-button"
-        )
-        next_page = first_page.css("a::attr(href)").get()
+        )    
+        next_page = next_button.css("a::attr(href)").get()
         if next_page is not None:
             yield response.follow(
                 next_page,
@@ -167,5 +176,8 @@ class housespider(scrapy.Spider):
             url_imagenes.append(url)
         item['imagenes'] = url_imagenes
         item['descripcion'] = response.css("p.ui-pdp-description__content::text").getall()
+
+        if item['propiedad'] == 'departamento' and item['tipo'] == 'arriendo' and 'gastos_comunes' not in item:
+            item['gastos_comunes'] = response.css("p.ui-pdp-color--GRAY.ui-pdp-size--XSMALL.ui-pdp-family--REGULAR.ui-pdp-maintenance-fee-ltr::text").get()
 
         yield item
