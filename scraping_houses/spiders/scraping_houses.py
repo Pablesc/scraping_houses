@@ -91,16 +91,22 @@ class housespider(scrapy.Spider):
         resultado_ = (
             response.css(
                 "span.ui-search-search-result__quantity-results.shops-custom-secondary-font::text"
-            )   
+            )         
             .get()
         )
 
         if '.' in resultado_:
             resultado_ = resultado_.replace('.', '')
+        elif resultado_ is None:
+            yield scrapy.Request(
+                url=response.url,
+                callback=self.urls_inmuebles,
+                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna}
+            )
 
         resultado = [int(x) for x in resultado_.split() if x.isdigit()]
 
-        if resultado[0] > 2000: #2016
+        if resultado[0] > 2016: 
             comunas_filtro = response.css(".ui-search-money-picker__li")
             urls_comunas_filtro = comunas_filtro.css("a::attr(href)").getall()
             for url in urls_comunas_filtro:
