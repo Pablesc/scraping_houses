@@ -7,13 +7,12 @@ from scraping_houses.items import ScrapingHousesItem
 
 class housespider(scrapy.Spider):
     name = "houses"
-
     def start_requests(self):
         tipo_publicacion = ['venta', 'arriendo']
         propiedades = ['casa', 'departamento']
         for tipo in tipo_publicacion:
             for propiedad in propiedades:
-                url = f"https://www.portalinmobiliario.com/{tipo}/{propiedad}/propiedades-usadas_FiltersAvailableSidebar?filter=state"
+                url = f"https://www.portalinmobiliario.com/{tipo}/{propiedad}/propiedades-usadas/_OrderId_BEGINS*DESC_NoIndex_True_FiltersAvailableSidebar?filter=state"
                 yield scrapy.Request(
                     url = url,
                     callback=self.urls_region,
@@ -88,6 +87,8 @@ class housespider(scrapy.Spider):
         comuna = response.meta["comuna"]
         region = response.meta["region"]
 
+        self.stop_scraping = False
+
         resultado_ = (
             response.css(
                 "span.ui-search-search-result__quantity-results.shops-custom-secondary-font::text"
@@ -119,6 +120,9 @@ class housespider(scrapy.Spider):
             lista_inmuebles = response.css("div.ui-search-result__wrapper") 
             for casas in lista_inmuebles:
                 url_casa = casas.css("a::attr(href)").get()
+                if self.stop_scraping:
+                    self.logger.info("Deteniendo scraping para esta comuna.")
+                    return
                 yield scrapy.Request(
                     url=url_casa,
                     callback=self.parse_data,
@@ -144,6 +148,20 @@ class housespider(scrapy.Spider):
     def parse_data(self, response, **kwargs):
         item = ScrapingHousesItem()
         
+        item['publicacion'] = response.css(
+            ".ui-pdp-color--GRAY.ui-pdp-size--XSMALL.ui-pdp-family--REGULAR.ui-pdp-seller-validated__title::text"
+        ).get()   
+
+        if item['publicacion'] == "Corredora con ":
+            item['publicacion'] = response.css(
+                ".ui-pdp-color--GRAY.ui-pdp-size--XSMALL.ui-pdp-family--REGULAR.ui-pdp-header__bottom-subtitle::text"
+            ).get()
+
+        fecha_publicacion = [int(x) for x in item['publicacion'].split() if x.isdigit()]
+        if fecha_publicacion[0] > 8:
+            self.logger.info("La publicación tiene más de 8 días. Deteniendo scraping para esta comuna o región.")
+            self.stop_scraping = True
+
         item['precio'] = response.css(".ui-pdp-price__second-line span::text").get()
         item['barrio'] = response.css(".andes-breadcrumb__item:nth-child(6) .andes-breadcrumb__link::text").get()
         item['comuna'] = response.meta["comuna"]
@@ -156,13 +174,6 @@ class housespider(scrapy.Spider):
         item['direccion'] = response.css(
             "p.ui-pdp-color--BLACK.ui-pdp-size--SMALL.ui-pdp-family--REGULAR.ui-pdp-media__title::text"
         ).getall()[-1]
-        item['publicacion'] = response.css(
-            ".ui-pdp-color--GRAY.ui-pdp-size--XSMALL.ui-pdp-family--REGULAR.ui-pdp-seller-validated__title::text"
-        ).get()   
-        if item['publicacion'] == "Corredora con ":
-            item['publicacion'] = response.css(
-                ".ui-pdp-color--GRAY.ui-pdp-size--XSMALL.ui-pdp-family--REGULAR.ui-pdp-header__bottom-subtitle::text"
-            ).get()
         
         item['date'] = datetime.datetime.now()
 
