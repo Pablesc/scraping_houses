@@ -89,33 +89,43 @@ class housespider(scrapy.Spider):
 
         self.stop_scraping = False
 
-        resultado_ = (
-            response.css(
+        resultado_ = response.css(
                 "span.ui-search-search-result__quantity-results.shops-custom-secondary-font::text"
-            )         
-            .get()
-        )
-
-        if '.' in resultado_:
-            resultado_ = resultado_.replace('.', '')
-        elif resultado_ is None:
+            ).get()
+        
+        if resultado_ is None:
             yield scrapy.Request(
                 url=response.url,
                 callback=self.urls_inmuebles,
                 meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna}
             )
+        elif '.' in resultado_:
+            resultado_ = resultado_.replace('.', '')
 
         resultado = [int(x) for x in resultado_.split() if x.isdigit()]
 
         if resultado[0] > 2016: 
             comunas_filtro = response.css(".ui-search-money-picker__li")
-            urls_comunas_filtro = comunas_filtro.css("a::attr(href)").getall()
-            for url in urls_comunas_filtro:
-                yield scrapy.Request(
-                    url=url,
-                    callback=self.urls_inmuebles,
-                    meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region}
-                )
+            if len(comunas_filtro) != 0:
+                urls_comunas_filtro = comunas_filtro.css("a::attr(href)").getall()
+                for url in urls_comunas_filtro:
+                    yield scrapy.Request(
+                        url=url,
+                        callback=self.urls_inmuebles,
+                        meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region}
+                    )
+            else:
+                filtros = response.css(".ui-search-filter-dl.shops__filter-items")
+                for filtro in filtros:
+                    tipo_filtro = filtro.css("h3.ui-search-filter-dt-title.shops-custom-primary-font::text").get()
+                    if tipo_filtro == 'Superficie total':
+                        urls_comunas_filtro = filtro.css("a.ui-search-link::attr(href)").getall()
+                        for url in urls_comunas_filtro:
+                            yield scrapy.Request(
+                            url=url,
+                            callback=self.urls_inmuebles,
+                            meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region}
+                        )
         else:
             lista_inmuebles = response.css("div.ui-search-result__wrapper") 
             for casas in lista_inmuebles:
@@ -150,18 +160,18 @@ class housespider(scrapy.Spider):
         
         item['publicacion'] = response.css(
             ".ui-pdp-color--GRAY.ui-pdp-size--XSMALL.ui-pdp-family--REGULAR.ui-pdp-seller-validated__title::text"
-        ).get()   
-
-        if item['publicacion'] == "Corredora con ":
+        ).get()
+        
+        if 'publicado' not in item['publicacion'].split():
             item['publicacion'] = response.css(
                 ".ui-pdp-color--GRAY.ui-pdp-size--XSMALL.ui-pdp-family--REGULAR.ui-pdp-header__bottom-subtitle::text"
-            ).get()
+            ).get() 
 
-        fecha_publicacion = [int(x) for x in item['publicacion'].split() if x.isdigit()]
-        if fecha_publicacion[0] > 8:
+        fecha_publicacion = item['publicacion'].split()
+        if int(fecha_publicacion[2]) > 10 and (fecha_publicacion[3] == 'día' or fecha_publicacion[3] == 'días'):
             self.logger.info("La publicación tiene más de 8 días. Deteniendo scraping para esta comuna o región.")
             self.stop_scraping = True
-
+        
         item['precio'] = response.css(".ui-pdp-price__second-line span::text").get()
         item['barrio'] = response.css(".andes-breadcrumb__item:nth-child(6) .andes-breadcrumb__link::text").get()
         item['comuna'] = response.meta["comuna"]
