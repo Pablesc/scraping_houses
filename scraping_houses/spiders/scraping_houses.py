@@ -108,13 +108,26 @@ class housespider(scrapy.Spider):
 
         if resultado[0] > 2016: 
             comunas_filtro = response.css(".ui-search-money-picker__li")
-            urls_comunas_filtro = comunas_filtro.css("a::attr(href)").getall()
-            for url in urls_comunas_filtro:
-                yield scrapy.Request(
-                    url=url,
-                    callback=self.urls_inmuebles,
-                    meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region}
-                )
+            if len(comunas_filtro) != 0:
+                urls_comunas_filtro = comunas_filtro.css("a::attr(href)").getall()
+                for url in urls_comunas_filtro:
+                    yield scrapy.Request(
+                        url=url,
+                        callback=self.urls_inmuebles,
+                        meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region}
+                    )
+            else:
+                filtros = response.css(".ui-search-filter-dl.shops__filter-items")
+                for filtro in filtros:
+                    tipo_filtro = filtro.css("h3.ui-search-filter-dt-title.shops-custom-primary-font::text").get()
+                    if tipo_filtro == 'Superficie total':
+                        urls_comunas_filtro = filtro.css("a.ui-search-link::attr(href)").getall()
+                        for url in urls_comunas_filtro:
+                            yield scrapy.Request(
+                            url=url,
+                            callback=self.urls_inmuebles,
+                            meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region}
+                        )
         else:
             lista_inmuebles = response.css("div.ui-search-result__wrapper") 
             for casas in lista_inmuebles:
