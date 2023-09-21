@@ -95,14 +95,14 @@ class housespider(scrapy.Spider):
             .get()
         )
 
-        if '.' in resultado_:
-            resultado_ = resultado_.replace('.', '')
-        elif resultado_ is None:
+        if resultado_ is None:
             yield scrapy.Request(
                 url=response.url,
                 callback=self.urls_inmuebles,
                 meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna}
             )
+        elif '.' in resultado_:
+            resultado_ = resultado_.replace('.', '')
 
         resultado = [int(x) for x in resultado_.split() if x.isdigit()]
 
@@ -172,7 +172,7 @@ class housespider(scrapy.Spider):
         item['publicacion'] = response.css(
             ".ui-pdp-color--GRAY.ui-pdp-size--XSMALL.ui-pdp-family--REGULAR.ui-pdp-seller-validated__title::text"
         ).get()   
-        if item['publicacion'] == "Corredora con ":
+        if item['publicacion'] == "Corredora con " or item['publicacion'] is None:
             item['publicacion'] = response.css(
                 ".ui-pdp-color--GRAY.ui-pdp-size--XSMALL.ui-pdp-family--REGULAR.ui-pdp-header__bottom-subtitle::text"
             ).get()
