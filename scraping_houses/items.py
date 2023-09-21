@@ -8,7 +8,7 @@ class ScrapingHousesItem(scrapy.Item):
     direccion = scrapy.Field()
     publicacion = scrapy.Field()
     url = scrapy.Field()
-    date = scrapy.Field()
+    date = scrapy.Field() 
     ubicacion = scrapy.Field()
     superficie_total = scrapy.Field()
     superficie_util = scrapy.Field()
