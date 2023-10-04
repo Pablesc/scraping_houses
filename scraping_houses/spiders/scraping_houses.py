@@ -51,7 +51,7 @@ class housespider(scrapy.Spider):
                             callback=self.urls_comunas_filtro,
                             meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'url':url_}
                         )
-                    else:
+                    else: 
                         comunas = filtro.css("span.ui-search-filter-name.shops-custom-secondary-font::text").getall()
                         url_comunas = filtro.css("a.ui-search-link::attr(href)").getall()
                         for comuna, url_comuna in zip(comunas, url_comunas):
