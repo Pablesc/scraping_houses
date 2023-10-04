@@ -140,7 +140,6 @@ class housespider(scrapy.Spider):
                     )
                 return # duda de este
             else:
-                #filtros = response.css(".ui-search-filter-dl.shops__filter-items")
                 for filtro in filtros:
                     tipo_filtro = filtro.css("h3.ui-search-filter-dt-title.shops-custom-primary-font::text").get()
                     if tipo_filtro == 'Superficie total':
