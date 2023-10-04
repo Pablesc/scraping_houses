@@ -38,7 +38,7 @@ class housespider(scrapy.Spider):
         propiedad = response.meta['propiedad']
         region = response.meta['region']
         filtros = response.css(".ui-search-filter-dl.shops__filter-items")
-        if len(filtros) != 0: # and resultado != 1: 
+        if len(filtros) != 0: # and resultado != 1:
             tipos_filtros = []
             for filtro in filtros:
                 tipo_filtro = filtro.css("h3.ui-search-filter-dt-title.shops-custom-primary-font::text").get()
