@@ -1,6 +1,6 @@
 import scrapy
 class ScrapingHousesItem(scrapy.Item):
-    # Items de casas en venta 
+    # Items de casas en venta
     precio = scrapy.Field()
     barrio = scrapy.Field()
     region = scrapy.Field()
