@@ -3,11 +3,14 @@ from unidecode import unidecode
 import datetime
 import time
 import random
+import re
 from scraping_houses.items import ScrapingHousesItem
+from ..url_ids_mod import obtener_url_ids
 
 class housespider(scrapy.Spider):
     name = "houses"
     def start_requests(self):
+        self.url_ids = obtener_url_ids()
         tipo_publicacion = ['venta', 'arriendo']
         propiedades = ['casa', 'departamento']
         for tipo in tipo_publicacion:
@@ -25,60 +28,77 @@ class housespider(scrapy.Spider):
         url_regiones = response.css("a.ui-search-search-modal-filter.ui-search-link::attr(href)").getall()
         regiones = response.css("span.ui-search-search-modal-filter-name::text").getall()
         for region, url_region in zip(regiones, url_regiones):
-            #url = f"https://www.portalinmobiliario.com/{tipo}/{propiedad}/propiedades-usadas/{unidecode(region)}_FiltersAvailableSidebar?filter=city"
-            url = url_region
             yield scrapy.Request(
-                url = url,
+                url = url_region,
                 callback=self.urls_comunas,
-                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'url_region': url}
+                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'url_region': url_region}
             )
     def urls_comunas(self,response):
         tipo = response.meta['tipo']
         propiedad = response.meta['propiedad']
         region = response.meta['region']
         filtros = response.css(".ui-search-filter-dl.shops__filter-items")
-        tipos_filtros = []
-        for filtro in filtros:
-            tipo_filtro = filtro.css("h3.ui-search-filter-dt-title.shops-custom-primary-font::text").get()
-            tipos_filtros.append(tipo_filtro)
-            if tipo_filtro == 'Ciudades':
-                url_ = filtro.css("a.ui-search-modal__link.ui-search-modal--default.ui-search-link::attr(href)").get()
-                if url_ is not None:
-                    yield scrapy.Request(
-                        url = url_,
-                        callback=self.urls_comunas_filtro,
-                        meta={'tipo': tipo, 'propiedad': propiedad, 'region': region}
-                    )
-                else:
-                    comunas = filtro.css("span.ui-search-filter-name.shops-custom-secondary-font::text").getall()
-                    url_comunas = filtro.css("a.ui-search-link::attr(href)").getall()
-                    for comuna, url_comuna in zip(comunas, url_comunas):
-                        url = url_comuna
+        if len(filtros) != 0: # and resultado != 1:
+            tipos_filtros = []
+            for filtro in filtros:
+                tipo_filtro = filtro.css("h3.ui-search-filter-dt-title.shops-custom-primary-font::text").get()
+                tipos_filtros.append(tipo_filtro)
+                if tipo_filtro == 'Ciudades':
+                    url_ = filtro.css("a.ui-search-modal__link.ui-search-modal--default.ui-search-link::attr(href)").get()
+                    if url_ is not None: # Mostrar más
                         yield scrapy.Request(
-                            url = url,
-                            callback=self.urls_inmuebles,
-                            meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna}
+                            url = url_,
+                            callback=self.urls_comunas_filtro,
+                            meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'url':url_}
                         )
-        if 'Ciudades' not in tipos_filtros:
-            url_region =  response.meta['url_region']
+                    else:
+                        comunas = filtro.css("span.ui-search-filter-name.shops-custom-secondary-font::text").getall()
+                        url_comunas = filtro.css("a.ui-search-link::attr(href)").getall()
+                        for comuna, url_comuna in zip(comunas, url_comunas):
+                            yield scrapy.Request(
+                                url = url_comuna,
+                                callback=self.urls_inmuebles,
+                                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna, 'url':url_comuna}
+                            )
+            if 'Ciudades' not in tipos_filtros:
+                url_region =  response.meta['url_region']
+                yield scrapy.Request(
+                    url =  response.url, #url_region,
+                    callback=self.urls_inmuebles,
+                    meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': region, 'url': url_region},
+                    dont_filter=True
+                )
+        else:
+            #url_region =  response.meta['url_region']
             yield scrapy.Request(
-                url = url_region,
-                callback=self.urls_inmuebles,
-                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': region},
-                dont_filter=True
-            )
+                    url =  response.url, #,url_region,
+                    callback=self.urls_comunas,
+                    meta={'tipo': tipo, 'propiedad': propiedad, 'region': region},#, 'url_region': url_region},
+                    dont_filter=True
+                )
     def urls_comunas_filtro(self,response):
         tipo = response.meta['tipo']
         propiedad = response.meta['propiedad']
         region = response.meta['region']
         url_comunas = response.css("a.ui-search-search-modal-filter.ui-search-link::attr(href)").getall()
         comunas = response.css("span.ui-search-search-modal-filter-name::text").getall()
-        for comuna, url_comuna in zip(comunas, url_comunas):
-            url = url_comuna
+        # En este punto debo agregar recursividad, ya que si o si debe cargar
+        if len(comunas) != 0:
+            print(region, comunas)
+            for comuna, url_comuna in zip(comunas, url_comunas):
+                #url = url_comuna
+                yield scrapy.Request(
+                    url = url_comuna,
+                    callback=self.urls_inmuebles,
+                    meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna, 'url': url_comuna}
+                )
+        else:
+            url = response.meta['url']
             yield scrapy.Request(
-                url = url,
-                callback=self.urls_inmuebles,
-                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna}
+                url = response.url, #url,
+                callback=self.urls_comunas_filtro,
+                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna, 'url':url},
+                dont_filter=True
             )
 
     def urls_inmuebles(self, response):
@@ -87,24 +107,28 @@ class housespider(scrapy.Spider):
         comuna = response.meta["comuna"]
         region = response.meta["region"]
 
-        self.stop_scraping = False
-
         resultado_ = response.css(
                 "span.ui-search-search-result__quantity-results.shops-custom-secondary-font::text"
             ).get()
         
         if resultado_ is None:
             yield scrapy.Request(
-                url=response.url,
+                url=response.url,#url_o,
                 callback=self.urls_inmuebles,
-                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna}
+                meta={'tipo': tipo, 'propiedad': propiedad, 'region': region, 'comuna': comuna},
+                dont_filter=True
             )
+            # En teoría, con este return se deja de ejecutar el codigo
+            return
         elif '.' in resultado_:
             resultado_ = resultado_.replace('.', '')
-
+        
         resultado = [int(x) for x in resultado_.split() if x.isdigit()]
-
-        if resultado[0] > 2016: 
+        print(resultado, response.url)
+        # Aca falta agregar una restriccion, para cuando sean mayores, si o si deben
+        # estar los filtros, si no cargan
+        filtros = response.css(".ui-search-filter-dl.shops__filter-items")
+        if resultado[0] > 2016 and len(filtros) != 0: 
             comunas_filtro = response.css(".ui-search-money-picker__li")
             if len(comunas_filtro) != 0:
                 urls_comunas_filtro = comunas_filtro.css("a::attr(href)").getall()
@@ -112,41 +136,54 @@ class housespider(scrapy.Spider):
                     yield scrapy.Request(
                         url=url,
                         callback=self.urls_inmuebles,
-                        meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region}
+                        meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region, 'url':url}
                     )
+                return # duda de este
             else:
-                filtros = response.css(".ui-search-filter-dl.shops__filter-items")
+                #filtros = response.css(".ui-search-filter-dl.shops__filter-items")
                 for filtro in filtros:
                     tipo_filtro = filtro.css("h3.ui-search-filter-dt-title.shops-custom-primary-font::text").get()
                     if tipo_filtro == 'Superficie total':
                         urls_comunas_filtro = filtro.css("a.ui-search-link::attr(href)").getall()
                         for url in urls_comunas_filtro:
                             yield scrapy.Request(
-                            url=url,
-                            callback=self.urls_inmuebles,
-                            meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region}
-                        )
-        else:
-            lista_inmuebles = response.css("div.ui-search-result__wrapper") 
+                                url=url,
+                                callback=self.urls_inmuebles,
+                                meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region,'url':url}
+                            )
+                        return
+        elif resultado[0] > 2016 and len(filtros) == 0:
+            yield scrapy.Request(
+                url= response.url,
+                callback=self.urls_inmuebles,
+                meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region},
+                dont_filter=True
+            )
+            return
+        elif resultado[0] <= 2016:
+            lista_inmuebles = response.css("div.ui-search-result__wrapper")
+            patron = r"MLC-[0-9]+"
             for casas in lista_inmuebles:
                 url_casa = casas.css("a::attr(href)").get()
-                if self.stop_scraping:
-                    self.logger.info("Deteniendo scraping para esta comuna.")
+                url_casa_ = re.search(patron, url_casa)
+                url_casa_id = url_casa_.group()
+                clave = f'{tipo[0]}{propiedad[0]}'  # Combinación de tipo y propiedad en una clave 
+                if url_casa_id in self.url_ids.get(clave, set()):
                     return
-                yield scrapy.Request(
-                    url=url_casa,
-                    callback=self.parse_data,
-                    meta={'tipo': tipo, 'propiedad': propiedad, "comuna": comuna, "region": region, 'url':url_casa}
-                )
-                t1 = random.uniform(0.1,0.5)
-                time.sleep(t1)
-
+                else:
+                    yield scrapy.Request(
+                        url=url_casa,
+                        callback=self.parse_data,
+                        meta={'tipo': tipo, 'propiedad': propiedad, 'comuna': comuna, 'region': region, 'url': url_casa}
+                    )
+                    t1 = random.uniform(0.1, 0.5)
+                    time.sleep(t1)
             t2 = random.randint(5, 10)
             time.sleep(t2)
 
         next_button = response.css(
             "li.andes-pagination__button.andes-pagination__button--next.shops__pagination-button"
-        )    
+        )
         next_page = next_button.css("a::attr(href)").get()
         if next_page is not None:
             yield response.follow(
@@ -157,20 +194,6 @@ class housespider(scrapy.Spider):
 
     def parse_data(self, response, **kwargs):
         item = ScrapingHousesItem()
-        
-        item['publicacion'] = response.css(
-            ".ui-pdp-color--GRAY.ui-pdp-size--XSMALL.ui-pdp-family--REGULAR.ui-pdp-seller-validated__title::text"
-        ).get()
-        
-        if 'publicado' not in item['publicacion'].split():
-            item['publicacion'] = response.css(
-                ".ui-pdp-color--GRAY.ui-pdp-size--XSMALL.ui-pdp-family--REGULAR.ui-pdp-header__bottom-subtitle::text"
-            ).get() 
-
-        fecha_publicacion = item['publicacion'].split()
-        if int(fecha_publicacion[2]) > 10 and (fecha_publicacion[3] == 'día' or fecha_publicacion[3] == 'días'):
-            self.logger.info("La publicación tiene más de 8 días. Deteniendo scraping para esta comuna o región.")
-            self.stop_scraping = True
         
         item['precio'] = response.css(".ui-pdp-price__second-line span::text").get()
         item['barrio'] = response.css(".andes-breadcrumb__item:nth-child(6) .andes-breadcrumb__link::text").get()
@@ -183,8 +206,14 @@ class housespider(scrapy.Spider):
         item['ubicacion'] = ubicacion_.css("img.ui-pdp-image::attr(src)").get()
         item['direccion'] = response.css(
             "p.ui-pdp-color--BLACK.ui-pdp-size--SMALL.ui-pdp-family--REGULAR.ui-pdp-media__title::text"
-        ).getall()[-1]
-        
+        ).getall()[-1] 
+        item['publicacion'] = response.css(
+            ".ui-pdp-color--GRAY.ui-pdp-size--XSMALL.ui-pdp-family--REGULAR.ui-pdp-seller-validated__title::text"
+        ).get()
+        if item['publicacion'] == 'Corredora con ' or item['publicacion'] == 'Particular con ' or item['publicacion'] is None:
+            item['publicacion'] = response.css(
+                ".ui-pdp-color--GRAY.ui-pdp-size--XSMALL.ui-pdp-family--REGULAR.ui-pdp-header__bottom-subtitle::text"
+            ).get()
         item['date'] = datetime.datetime.now()
 
         rows = response.css(".andes-table__row")
